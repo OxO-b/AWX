@@ -4,6 +4,7 @@
   - name: Ping test
     win_ping:
     register: ping_result
+    become: true
 
   - debug: msg="Unable to reach endpoint"
     when: '"unreachable" in ping_result'
