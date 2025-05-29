@@ -1,0 +1,40 @@
+- name: Checking Windows Connectivity
+  hosts: all
+  gather_facts: false
+  ignore_errors: true
+  tasks:      
+    - name: Get end point
+      debug: var=inventory_hostname
+      register: ep_name
+   
+    - name: Check Win Connectivity
+      win_ping:
+      register: ping_result
+      
+    - debug: msg="Unable to reach endpoint"
+      when: '"unreachable" in ping_result'
+      
+    - debug: msg="Able to reach endpoint"
+      when: '"ping" in ping_result'
+      
+    - name: debug stuff
+      debug:
+       var: commands
+
+    - name: add dummy host
+      add_host:
+        name: "dummy"
+        user: "{{ansible_user}}"
+        pwd: "{{ansible_password}}"
+      no_log: True
+ 
+    - name: run commands
+      win_command: "{{ item }}"
+      vars:
+        ansible_become: yes
+        ansible_become_method: runas
+        ansible_become_flags: logon_type=new_credentials logon_flags=netcredentials_only
+        ansible_become_user: "{{ hostvars['dummy'].user }}"
+        ansible_become_pass: "{{ hostvars['dummy'].pwd }}"      
+      ignore_errors: true
+      loop: "{{ commands.split('\n') }}"
