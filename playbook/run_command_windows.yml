@@ -29,7 +29,7 @@
       no_log: True
  
     - name: run commands
-      win_command: "{{ item }}"
+      win_shell: "{{ item }}"
       vars:
         ansible_become: yes
         ansible_become_method: runas
