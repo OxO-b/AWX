@@ -1,0 +1,28 @@
+- name: Checking linux Connectivity
+  hosts: all
+  gather_facts: false
+  ignore_errors: true
+  ignore_unreachable: true
+  become: true
+  tasks:      
+    - name: Get end point
+      debug: var=inventory_hostname
+      register: ep_name
+      
+    - name: Checking Linux Connectivity
+      shell: whoami
+      register: cmdopt
+      
+    - debug: var=cmdopt
+    
+    - debug: msg="Unable to reach endpoint"
+      when:  cmdopt.failed|default("true")
+      
+    - debug: msg="Able to reach endpoint"
+      when: cmdopt.changed |default("false")
+       
+    - name: run commands
+      shell: "{{ item }}"
+      become: true
+      ignore_errors: true
+      loop: "{{ commands.split('\n') }}"
