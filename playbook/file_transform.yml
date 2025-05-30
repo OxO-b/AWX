@@ -1,0 +1,89 @@
+- hosts: all
+  gather_facts: true
+  tasks:
+    - name: checking server is Linux or not
+      assert:
+        that:
+          - ansible_system == "Linux"
+        fail_msg: "Server is {{ ansible_system }},it is not Linux"
+      register: result
+      changed_when:
+        - result.evaluated_to is defined
+        - result.evaluated_to == False
+      failed_when: False
+
+    - name: Windows | Checking windows os environment
+      win_shell: |
+            Get-CimInstance -ClassName Win32_OperatingSystem -Property Version, ProductType, Caption  | ForEach-Object { [PSCustomObject]@{ Version = [Version]$_.Version; ProductType = $_.ProductType; Caption = $_.Caption } } | convertto-json
+      register: os_env_json
+      when: ansible_os_family == "Windows"
+
+    - debug:
+        var: os_env_json.stdout_lines
+      when: 
+          - ansible_os_family == "Windows"  
+          - os_env_json is defined  
+          - os_env_json.stdout | length > 0
+
+    - name: Setting a var to check installation status
+      set_fact:
+        agent_status: ""
+      
+    - name: Windows | upgrade sentinel agent
+      block:          
+        - name: Windows | Debug os environment json output
+          debug:
+              msg: "{{ os_env_json.stdout | from_json }}"
+              
+        - name: Windows | Read os environment json file and set to var
+          set_fact:
+              os_env: "{{ os_env_json.stdout | from_json }}"
+              
+        - name: Windows | print out Microsoft Windows version
+          debug:
+            msg: "This is {{ os_env['Caption'] }}"
+            
+        - name: Windows | File transfer  (Microsoft Windows Servers versions at or newer than Windows Server 2012 R2)
+          block:
+              - name: Windows | Copy Azure Connected Machine Agent and Proxy Script to endpoint
+                win_copy: src={{ item.src }} dest={{ item.dest }}
+                with_items:
+                    - { src: 'files/test.txt', dest: 'C:\Windows\Temp\test.txt' }
+                when: install_true
+          when: (os_env['Version']["Major"] | int == 6 and os_env['Version']["Minor"] | int != 3)
+      when: 
+          - ansible_os_family == "Windows"
+          - os_env_json is defined
+          - os_env_json.stdout | length > 0
+#---------------------------------------------------------------Linux------------------------------------------------------------------
+
+    - name: Linux | Install Arc agent in Linux OS environment(RedHat 7,8,9 and SLES 12,15)
+      block:
+        - name: Linux | Debug OS distribution
+          debug:
+            msg: "The {{ ansible_distribution }} version is {{ ansible_distribution_major_version }}"
+
+        - name:  Linux | Checking if already exists on Linux before copy
+          stat:
+              path: "/bin/azcmagent"
+          register: linux_stat_before
+          when: install_true
+          
+        - name: Linux | Copy Azure Connected Machine agent to endpoint
+          copy: src={{ item.src }} dest={{ item.dest }}
+          with_items:
+              - { src: 'files/test.txt', dest: '/tmp/test.txt' }
+          become: true
+          vars:
+            ansible_become_password: "{{ ansible_sudo_pass }}"
+          when: install_true
+          
+      when:
+          - ansible_system == "Linux"
+          - (('Rocky' in ansible_distribution) and (ansible_distribution_major_version | int >= 7)) or (('SLES' in ansible_distribution) and (ansible_distribution_major_version | int >= 12)) or (('CentOS' in ansible_distribution) and (ansible_distribution_major_version | int >= 7))     
+
+    - name: Status summary
+      debug:
+         msg:  "{{ agent_status }}"
+
+
