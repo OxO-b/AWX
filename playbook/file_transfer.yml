@@ -45,7 +45,7 @@
             
         - name: Windows | File transfer  (Microsoft Windows Servers versions at or newer than Windows Server 2012 R2)
           block:
-              - name: Windows | Copy Azure Connected Machine Agent and Proxy Script to endpoint
+              - name: Windows | Copy file transfer and Proxy Script to endpoint
                 win_copy: src={{ item.src }} dest={{ item.dest }}
                 with_items:
                     - { src: 'files/test.txt', dest: 'C:\Windows\Temp\test.txt' }
@@ -57,7 +57,7 @@
           - os_env_json.stdout | length > 0
 #---------------------------------------------------------------Linux------------------------------------------------------------------
 
-    - name: Linux | Install Arc agent in Linux OS environment(RedHat 7,8,9 and SLES 12,15)
+    - name: Linux | Copy file in Linux OS environment(RedHat 7,8,9 and SLES 12,15)
       block:
         - name: Linux | Debug OS distribution
           debug:
@@ -69,7 +69,7 @@
           register: linux_stat_before
           when: install_true
           
-        - name: Linux | Copy Azure Connected Machine agent to endpoint
+        - name: Linux | Copy file transfer and Proxy Script to endpoint
           copy: src={{ item.src }} dest={{ item.dest }}
           with_items:
               - { src: 'files/test.txt', dest: '/tmp/test.txt' }
