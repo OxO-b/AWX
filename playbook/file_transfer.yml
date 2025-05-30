@@ -28,8 +28,10 @@
     - name: Setting a var to check installation status
       set_fact:
         agent_status: ""
+
+#---------------------------------------------------------------Windows------------------------------------------------------------------
       
-    - name: Windows | upgrade sentinel agent
+    - name: Windows | File transfer
       block:          
         - name: Windows | Debug os environment json output
           debug:
@@ -57,7 +59,7 @@
           - os_env_json.stdout | length > 0
 #---------------------------------------------------------------Linux------------------------------------------------------------------
 
-    - name: Linux | Copy file in Linux OS environment(RedHat 7,8,9 and SLES 12,15)
+    - name: Linux | File transfer
       block:
         - name: Linux | Debug OS distribution
           debug:
