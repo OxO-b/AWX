@@ -50,7 +50,7 @@
                 with_items:
                     - { src: 'files/test.txt', dest: 'C:\Windows\Temp\test.txt' }
                 when: install_true
-          when: (os_env['Version']["Major"] | int == 6 and os_env['Version']["Minor"] | int != 3)
+          when: (os_env['Version']["Major"] | int > 6)
       when: 
           - ansible_os_family == "Windows"
           - os_env_json is defined
