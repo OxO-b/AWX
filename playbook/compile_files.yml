@@ -1,0 +1,77 @@
+- hosts: all
+  gather_facts: true
+    - name: Windows | Checking windows os environment
+      win_shell: |
+            Get-CimInstance -ClassName Win32_OperatingSystem -Property Version, ProductType, Caption  | ForEach-Object { [PSCustomObject]@{ Version = [Version]$_.Version; ProductType = $_.ProductType; Caption = $_.Caption } } | convertto-json
+      register: os_env_json
+      when: ansible_os_family == "Windows"
+
+    - debug:
+        var: os_env_json.stdout_lines
+      when: 
+          - ansible_os_family == "Windows"  
+          - os_env_json is defined  
+          - os_env_json.stdout | length > 0
+
+    - name: Setting a var to check installation status
+      set_fact:
+        agent_status: ""
+      
+    - name: Windows | Copy compile files
+      block:          
+        - name: Windows | Debug os environment json output
+          debug:
+              msg: "{{ os_env_json.stdout | from_json }}"
+              
+        - name: Windows | Read os environment json file and set to var
+          set_fact:
+              os_env: "{{ os_env_json.stdout | from_json }}"
+              
+        - name: Windows | print out Microsoft Windows version
+          debug:
+            msg: "This is {{ os_env['Caption'] }}"
+            
+        - name: Windows | Copy and compile files
+          block:
+              - name:  Windows | Checking if file already exists
+                set_fact:
+                    file_path: 'C:\Windows\Temp\test.txt'
+                when: compile_files    
+                
+              - name:  Windows | Checking if arc agent exists on windows before installation
+                win_stat:
+                  path: "{{ file_path }}"
+                register: windows_stat_before
+                when: compile_files
+                
+              - name: Windows | Copy Azure Connected Machine Agent and Proxy Script to endpoint
+                win_copy: src={{ item.src }} dest={{ item.dest }}
+                with_items:
+                    - { src: 'files/AzureConnectedMachineAgent1', dest: 'C:\Windows\Temp\AzureConnectedMachineAgent1' }
+  #                  - { src: 'files/Arc_Install_PLS_Proxy.ps1', dest: 'C:\Windows\Temp\Arc_Install_PLS_Proxy.ps1' }
+                when: compile_files
+
+              - name: Windows | Combile separated packages back together 
+                win_shell: |
+                    $infilePrefix="C:\Windows\Temp\AzureConnectedMachineAgent"
+                    $ostream = [System.Io.File]::OpenWrite("C:\Windows\Temp\test.txt")
+                    $chunkNum = 1
+                    $infileName = "$infilePrefix$chunkNum"
+                    $offset = 0
+                    while(Test-Path $infileName) {
+                        $bytes = [System.IO.File]::ReadAllBytes($infileName)
+                        $ostream.Write($bytes, 0, $bytes.Count)
+                        $chunkNum += 1
+                        $infileName = "$infilePrefix$chunkNum"
+                    }
+                    $ostream.close();
+                when: compile_files
+          when: (os_env['Version']["Major"] | int == 6 and os_env['Version']["Minor"] | int != 3)
+      when: 
+          - ansible_os_family == "Windows"
+          - os_env_json is defined
+          - os_env_json.stdout | length > 0
+                  
+    - name: Status summary
+      debug:
+         msg:  "{{ agent_status }}"
