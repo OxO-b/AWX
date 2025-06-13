@@ -48,7 +48,6 @@
                 win_copy: src={{ item.src }} dest={{ item.dest }}
                 with_items:
                     - { src: 'files/AzureConnectedMachineAgent1', dest: 'C:\Windows\Temp\AzureConnectedMachineAgent1' }
-  #                  - { src: 'files/Arc_Install_PLS_Proxy.ps1', dest: 'C:\Windows\Temp\Arc_Install_PLS_Proxy.ps1' }
                 when: compile_files
 
               - name: Windows | Combile separated packages back together 
@@ -72,6 +71,6 @@
           - os_env_json is defined
           - os_env_json.stdout | length > 0
                   
-    - name: Status summary
-      debug:
-         msg:  "{{ agent_status }}"
+#    - name: Status summary
+#      debug:
+#         msg:  "{{ agent_status }}"
